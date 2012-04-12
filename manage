@@ -194,7 +194,7 @@ for (;;) {
 		}
 		
 		#Ask user which VM to modify
-		my $item = askuser "Available VMs:", $menu_items, "\n   q Quit\n", $count;
+		my $item = askuser "Available VMs:", $menu_items, "   q Quit\n", $count;
 		
 		#Store the name of the chosen VM
 		$vm = $vms[$item-1];
