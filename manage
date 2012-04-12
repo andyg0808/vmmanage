@@ -4,10 +4,8 @@ temp=$(mktemp)
 
 while true
 do
-vms=$(vboxmanage list vms | sed -r '/^["]/!d; s/"([^"]*)"/\1/')
-runningvms=$(vboxmanage list runningvms | sed -r '/^["]/!d; s/"([^"]*)"/\1/')
-while read vm
-do
+	vms=$(vboxmanage list vms | sed -r '/^["]/!d; s/"([^"]*)"/\1/')
+	runningvms=$(vboxmanage list runningvms | sed -r '/^["]/!d; s/"([^"]*)"/\1/')
 
 dialog --menu "Available VMs:" 0 0 0 $(vboxmanage list vms | sed -r '/^["]/!d; s/"([^"]*)"/\1/') 2> $temp
 
@@ -33,7 +31,7 @@ then
 	#vboxmanage controlvm "$vm" "$(cat $temp)"
 	vboxmanage controlvm "$vm" "$(cat $temp)" && sleep 1 && dialog --msgbox "Operation on $vm was successful!" 10 60
 #	read
-sleep 1
+	sleep 1
 else
 	dialog --yesno "Start $vm?" 0 0
 	if [ $? -eq 0 ]
