@@ -52,6 +52,87 @@ USERASK: {
 	}
 }
 
+sub getprogram {
+	#Break up arguments
+	#$vm: VM name
+	#@safeops: An array of strings, each the name of an acceptable operation for the VM's current state
+	my ($vm, @safeops) = @_;
+	
+	my $program = "vboxmanage ";
+
+	#List of available operations, with human-readable descriptions of each
+	my %ops = (
+		'pause' => 'Pause VM',
+		'resume' => 'Resume execution of VM',
+		'reset' => 'Hard reset VM',
+		'poweroff' => 'Unplug the VM',
+		'savestate' => 'Save the VM state and unload it',
+		'gui' => 'Start VM with graphical console',
+		'headless' => 'Start VM to run in background',
+		'delete' => 'Delete saved state'
+	);
+
+	#List of program names for each op (all from vboxmanage)
+	my %program = (
+		'pause' => "controlvm '$vm' pause",
+		'resume' => "controlvm '$vm' resume",
+		'reset' => "controlvm '$vm' reset",
+		'poweroff' => "controlvm '$vm' poweroff",
+		'savestate' => "controlvm '$vm' savestate",
+		'gui' => "startvm '$vm' --type gui",
+		'headless' => "startvm '$vm' --type headless",
+		'delete' => "discardstate '$vm'"
+	);
+
+	debug "@safeops\n";
+
+	#Init variables
+	my $count = 1;
+	my $menu_items;
+
+	#Add each op to the menu
+	foreach my $i (@safeops) {
+		$menu_items .= "$count $ops{$i}\n";
+		$count ++;
+	}
+	#Ask user what to do, and store that opname from @safeops
+	my $op = askuser $menu_items, "q Quit\n", $count;
+	$op = $safeops[$op-1];
+	
+	debug "$op\n";
+	
+	#Return the name of the program to run:
+	return ($op, $ops{$op}, $program . $program{$op});
+}
+
+sub getinfo {
+	#Break up arguments
+	#$v: VM name to get info for
+	my ($v) = @_;
+	
+	#Get info listing
+	my $info = `vboxmanage showvminfo '$v'`;
+	
+	#Tell the user if we got info
+	if ($info) {
+		print "Got info on $v\n";
+	} else {
+		exit 2;
+	}
+	
+	#Extract specific facts from various places:
+	
+	#UUID
+	my ($uuid) = $info =~ /^UUID:\s*(\S+)/m;
+
+	#Run-state
+	my ($state) = $info =~ /^State:\s*(.+)\s+\(/m;
+	debug "'$state' of $v";
+
+	#Return hash of facts
+	return {'state' => $state, 'uuid' => $uuid};
+}
+
 #BEGIN PROGRAM
 #=============
 
@@ -74,23 +155,9 @@ my (%vms, @vms, $vm);
 {
 	#Gather further info about each vm
 	foreach my $v (@vms) {
-		#Get info listing
-		my $info = `vboxmanage showvminfo '$v'`;
-		if ($info) {
-		print "Got info on $v\n";
-		}
-	
-		#Extract specific facts from various places:
-	
-		#UUID
-		my $uuid = $vms{$v};
-	
-		#Run-state
-		my ($state) = $info =~ /^State:\s*(.+)\s+\(/m;
-		debug "'$state' of $v";
-	
-		#Load facts into hash
-		$vms{$v} = {'state' => $state, 'uuid' => $uuid};
+		#Get info for each VM
+		$vms{$v} = getinfo $v;
+		
 		debug "\n'$vms{$v}{'state'}'\n================\n\n";
 	}
 }
@@ -141,170 +208,41 @@ for (;;) {
 	#Offer the user the possible options, depending on VM state
 	{
 		#Scope variables to store operation name & program name
-		my ($op, $program);
-		$program = "vboxmanage ";
+		my @opinfo;
 	
-		#List of available operations, with human-readable descriptions of each
-		my %ops = (
-		'pause' => 'Pause VM',
-		'resume' => 'Resume execution of VM',
-		'reset' => 'Hard reset VM',
-		'poweroff' => 'Unplug the VM',
-		'savestate' => 'Save the VM state and unload it',
-		'gui' => 'Start VM with graphical console',
-		'headless' => 'Start VM to run in background'
-		);
-
 		#Check if it's running...
 		if ($vms{$vm}{'state'} eq 'running') {
-			#Store program name
-			$program .= "controlvm '$vm' ";
-			#Choose safe ops
-			my @safeops = ('pause', 'reset', 'poweroff', 'savestate');
-			debug "@safeops\n";
-			
-			#Init variables
-			my $count = 1;
-			my $menu_items;
-		
-			#Add each op to the menu
-			foreach my $i (@safeops) {
-				$menu_items .= "$count $ops{$i}\n";
-				$count ++;
-			}
-			#Ask user what to do, and store that opname from @safeops
-			$op = askuser $menu_items, "q Quit\n", $count;
-			$op = $safeops[$op-1];
+			@opinfo = getprogram $vm, ('pause', 'reset', 'poweroff', 'savestate');
 		}
 	
 		#Check if it's paused...
 		elsif ($vms{$vm}{'state'} eq 'paused') {
-			#Store program name
-			$program .= "controlvm '$vm' ";
-			#Choose safe ops
-			my @safeops = ('resume', 'poweroff', 'savestate');
-			debug "@safeops\n";
-			
-			#Init variables
-			my $count = 1;
-			my $menu_items;
-		
-			#Add each op to the menu
-			foreach my $i (@safeops) {
-				$menu_items .= "$count $ops{$i}\n";
-				$count ++;
-			}
-			#Ask user what to do, and store that opname from @safeops
-			$op = askuser $menu_items, "q Quit\n", $count;
-			$op = $safeops[$op-1];
+			@opinfo = getprogram $vm, ('resume', 'poweroff', 'savestate');
 		}
 	
-		#Check if it's saved or off...
-		elsif ($vms{$vm}{'state'} eq 'saved' || $vms{$vm}{'state'} eq 'powered off') {
-			#Store program name
-			$program .= "startvm '$vm' --type ";
-			#Choose safe ops
-			my @safeops = ('headless', 'gui');
-			debug "@safeops\n";
-		
-			#Init variables
-			my $count = 1;
-			my $menu_items;
-		
-			#Add each op to the menu
-			foreach my $i (@safeops) {
-				$menu_items .= "$count $ops{$i}\n";
-				$count ++;
-			}
-			#Ask user what to do, and store that opname from @safeops
-			$op = askuser $menu_items, "q Quit\n", $count;
-			$op = $safeops[$op-1];
-			
-			print "$op\n";
+		#Check if it's saved...
+		elsif ($vms{$vm}{'state'} eq 'saved') {
+			@opinfo = getprogram $vm, ('headless', 'gui', 'delete');
 		}
 		
+				#Check if it's off...
+		elsif ($vms{$vm}{'state'} eq 'powered off') {
+			@opinfo = getprogram $vm, ('headless', 'gui');
+		}
+
 		#Tell the user what we'll do
-		print "Executing $ops{$op}...\n";
+		print "Executing $opinfo[0]...\n";
 		
 		#Execute the chosen operation
-		print `$program $op`;
+		print `$opinfo[2]`;
 	}
 	
 	#Get data about changed VM
 	{
-			#Get info listing
-			my $info = `vboxmanage showvminfo '$vm'`;
-			if ($info) {
-			print "Got info on $vm\n";
-			}
-	
-			#Extract specific facts from various places:
-
-			#Run-state
-			my ($state) = $info =~ /^State:\s*(.+)\s+\(/m;
-			debug "'$state' of $vm";
-	
 			#Load facts into hash
-			$vms{$vm}{'state'} = $state;
+			$vms{$vm} = getinfo $vm;
 			debug "\n'$vms{$vm}{'state'}'\n================\n\n";
 	}
 
 
 }
-=pod
-{
-	#To run or not to run
-	if (%vms{$vm}) {
-		#Running; give options
-		}
-}
-
-=pod
-
-	runningvms=$(vboxmanage list runningvms | sed -r '/^["]/!d; s/"([^"]*)"/\1/')
-
-	dialog --menu "Available VMs:" 0 0 0 $(vboxmanage list vms | sed -r '/^["]/!d; s/"([^"]*)"/\1/') 2> $temp
-
-	if [ $? -eq 1 ]
-	then
-		exit
-	fi
-
-	vm=$(cat $temp)
-
-	if vboxmanage list runningvms | grep -q "$vm"
-	then
-		dialog --menu "Operation:" 0 0 0 pause "Pause the VM" resume "Resume the VM" savestate "Save the VM and unload it" poweroff "Pull the plug on the VM" 2> $temp
-
-		if [ $? -eq 1 ]
-		then
-			exit
-		fi
-	#	vboxmanage controlvm "$vm" "$(cat $temp)" | dialog --programbox 0 0
-		#vboxmanage controlvm "$vm" "$(cat $temp)" > $temp &
-
-		#dialog --tailbox $temp 20 60 
-		#vboxmanage controlvm "$vm" "$(cat $temp)"
-		vboxmanage controlvm "$vm" "$(cat $temp)" && sleep 1 && dialog --msgbox "Operation on $vm was successful!" 10 60
-	#	read
-	sleep 1
-	else
-		dialog --yesno "Start $vm?" 0 0
-		if [ $? -eq 0 ]
-		then
-			if [ -n "$DISPLAY" ]
-			then
-				type=gui
-			else
-				type=headless
-			fi
-			#vboxmanage startvm "$vm" --type $type > $temp
-			#dialog --tailbox $temp 20 60
-			#vboxmanage startvm "$vm" --type $type
-			vboxmanage startvm "$vm" --type $type && sleep 1 && dialog --msgbox "Operation on $vm was successful!" 10 60
-	#		read
-
-	sleep 1
-		fi
-	fi
-=cut
