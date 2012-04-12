@@ -69,7 +69,8 @@ sub getprogram {
 		'savestate' => 'Save the VM state and unload it',
 		'gui' => 'Start VM with graphical console',
 		'headless' => 'Start VM to run in background',
-		'delete' => 'Delete saved state'
+		'delete' => 'Delete saved state',
+		'back' => 'Go back...'
 	);
 
 	#List of program names for each op (all from vboxmanage)
@@ -81,7 +82,8 @@ sub getprogram {
 		'savestate' => "controlvm '$vm' savestate",
 		'gui' => "startvm '$vm' --type gui",
 		'headless' => "startvm '$vm' --type headless",
-		'delete' => "discardstate '$vm'"
+		'delete' => "discardstate '$vm'",
+		'back' => ""
 	);
 
 	debug "@safeops\n";
@@ -203,43 +205,46 @@ for (;;) {
 	}
 
 	#Offer the user the possible options, depending on VM state
-	{
+	VMACTION: {
 		#Scope variables to store operation name & program name
 		my @opinfo;
 	
 		#Check if it's running...
 		if ($vms{$vm}{'state'} eq 'running') {
-			@opinfo = getprogram $vm, ('pause', 'reset', 'poweroff', 'savestate');
+			@opinfo = getprogram $vm, ('pause', 'reset', 'poweroff', 'savestate', 'back');
 		}
 	
 		#Check if it's paused...
 		elsif ($vms{$vm}{'state'} eq 'paused') {
-			@opinfo = getprogram $vm, ('resume', 'poweroff', 'savestate');
+			@opinfo = getprogram $vm, ('resume', 'poweroff', 'savestate', 'back');
 		}
 	
 		#Check if it's saved...
 		elsif ($vms{$vm}{'state'} eq 'saved') {
-			@opinfo = getprogram $vm, ('headless', 'gui', 'delete');
+			@opinfo = getprogram $vm, ('headless', 'gui', 'delete', 'back');
 		}
 		
 				#Check if it's off...
 		elsif ($vms{$vm}{'state'} eq 'powered off') {
-			@opinfo = getprogram $vm, ('headless', 'gui');
+			@opinfo = getprogram $vm, ('headless', 'gui', 'back');
 		}
+		
+		#Go back if that was ordered
+		last VMACTION if ($opinfo[0] eq 'back');
 
 		#Tell the user what we'll do
 		print "Executing $opinfo[0]...\n";
 		
 		#Execute the chosen operation
 		print `$opinfo[2]`;
-	}
-	
-	#Get data about changed VM
-	{
-			#Load facts into hash
-			$vms{$vm} = getinfo $vm;
-			debug "\n'$vms{$vm}{'state'}'\n================\n\n";
-	}
 
+
+		#Get data about changed VM
+		{
+				#Load facts into hash
+				$vms{$vm} = getinfo $vm;
+				debug "\n'$vms{$vm}{'state'}'\n================\n\n";
+		}
+	}
 
 }
