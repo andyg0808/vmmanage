@@ -10,11 +10,11 @@ sub debug {
 
 #Ask the user for input
 sub askuser {
-my ($menu_items, $quit, $max) = @_;
+my ($prompt, $menu_items, $quit, $max) = @_;
 
 USERASK: {
 		#Tell the user what to do
-		print "Available VMs:\n\n";
+		print "$prompt\n\n";
 		print "$menu_items$quit\n";
 	
 		#Get the user's desired item
@@ -96,7 +96,7 @@ sub getprogram {
 		$count ++;
 	}
 	#Ask user what to do, and store that opname from @safeops
-	my $op = askuser $menu_items, "q Quit\n", $count;
+	my $op = askuser "Select an action on '$vm':", $menu_items, "q Quit\n", $count;
 	$op = $safeops[$op-1];
 	
 	debug "$op\n";
@@ -187,15 +187,12 @@ for (;;) {
 			elsif ($vms{$v}{'state'} eq 'powered off') {debug "$v powered off\n"; $marker = '  ';}
 		
 			#Add line to menu
-			$menu_items .= "$marker $count $v\n";
+			$menu_items .= "$marker $count '$v'\n";
 
 		}
-		my $item = askuser $menu_items, "   q Quit\n", $count;
-	
-		#Check if the user canceled
-		if ($item == $count) {
-			exit 1;
-		}
+		
+		#Ask user which VM to modify
+		my $item = askuser "Available VMs:", $menu_items, "\n   q Quit\n", $count;
 		
 		#Store the name of the chosen VM
 		$vm = $vms[$item-1];
