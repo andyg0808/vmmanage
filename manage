@@ -14,7 +14,7 @@ my ($menu_items, $quit, $max) = @_;
 
 USERASK: {
 		#Tell the user what to do
-		print "Please choose an item from the list below:\n\n";
+		print "Available VMs:\n\n";
 		print "$menu_items$quit\n";
 	
 		#Get the user's desired item
