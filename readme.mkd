@@ -14,11 +14,11 @@ Just run the script. It is interactive.
 ##manage
 When manage is run as above, it will gather information about the available virtual machines and then display a text-based menu to the user. The symbols used to indicate VM status in this menu are as follows:
 
-Symbol		Meaning
-------		-------
-`>>`		Virtual machine is running.
-`||`		Virtual machine is paused.
-`[]`		Virtual machine is off, with saved state.
+<!--Symbol		Meaning
+------		--------->
+`>>`		Virtual machine is running.<br>
+`||`		Virtual machine is paused.<br>
+`[]`		Virtual machine is off, with saved state.<br>
 no symbol	Virtual machine is off.
 
 Once the user chooses a virtual machine to modify, manage offers a menu of appropriate actions depending on the status of the machine. When the user has chosen an action, manage executes the action, then updates the status of the machine. It then re-displays the menu.
