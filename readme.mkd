@@ -1,0 +1,44 @@
+#Overview
+vmmanage makes it easy to manage virtual machines in Oracle's VirtualBox. It displays a list of available machines to the user, with symbols indicating their state, and allows the user to choose appropriate operations on each of them.
+
+#Dependencies
+- perl
+- VirtualBox (actually, vboxmanage)
+
+#Usage
+**manage**
+
+Just run the script. It is interactive.
+
+#Descriptions
+##manage
+When manage is run as above, it will gather information about the available virtual machines and then display a text-based menu to the user. The symbols used to indicate VM status in this menu are as follows:
+
+Symbol		Meaning
+------		-------
+`>>`		Virtual machine is running.
+`||`		Virtual machine is paused.
+`[]`		Virtual machine is off, with saved state.
+no symbol	Virtual machine is off.
+
+Once the user chooses a virtual machine to modify, manage offers a menu of appropriate actions depending on the status of the machine. When the user has chosen an action, manage executes the action, then updates the status of the machine. It then re-displays the menu.
+
+Manage simply wraps vboxmanage, reading the output of vboxmanage and running vboxmanage commands to operate on the virtual machines.
+
+#License
+vmmanage--A text-based virtual machine management front-end
+Copyright (C) 2011  andyg0808
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
